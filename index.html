@@ -4,85 +4,172 @@
 <meta charset="UTF-8">
 <title>Bolão do Bebê 👶</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <style>
 body {
   font-family: Arial, sans-serif;
   background: #f6f6f6;
+  padding: 20px;
   display: flex;
   justify-content: center;
-  align-items: center;
-  min-height: 100vh;
 }
 .card {
   background: #fff;
-  padding: 25px;
+  max-width: 450px;
   width: 100%;
-  max-width: 420px;
+  padding: 20px;
   border-radius: 14px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-  text-align: center;
 }
-button {
-  width: 100%;
-  padding: 12px;
-  margin: 6px 0;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  cursor: pointer;
-}
-.menino { background: #cce5ff; }
-.menina { background: #ffd6e7; }
-.whatsapp { background: #25D366; color: #fff; }
-input {
+h2, h4 { text-align: center; }
+
+input, button {
   width: 100%;
   padding: 10px;
-  margin: 8px 0;
+  margin-top: 8px;
   border-radius: 6px;
   border: 1px solid #ccc;
+  font-size: 16px;
 }
+
+button {
+  border: none;
+  cursor: pointer;
+}
+
+.menino { background: #cce5ff; }
+.menina { background: #ffd6e7; }
+.whatsapp { background: #25D366; color: white; }
+
+.numeros {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+}
+.numero {
+  background: #eee;
+  padding: 8px;
+  text-align: center;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.numero.usado {
+  background: #ccc;
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+.numero.selecionado {
+  background: #8bc34a;
+  color: white;
+}
+
 .pix {
   background: #f1f1f1;
   padding: 10px;
   border-radius: 8px;
-  margin-top: 10px;
+  text-align: center;
 }
+.hidden { display: none; }
 </style>
 </head>
+
 <body>
-
 <div class="card">
-  <h2>Bolão do Bebê 👶💖</h2>
-  <p>Aposta: <strong>R$ 5,00</strong></p>
 
+<h2>Bolão do Bebê 👶</h2>
+<p style="text-align:center"><strong>Valor: R$ 5,00</strong></p>
+
+<!-- ETAPA 1 -->
+<div id="etapa1">
   <input id="nome" placeholder="Seu nome">
 
-  <button class="menino" onclick="escolher('Menino 💙')">💙 Menino</button>
-  <button class="menina" onclick="escolher('Menina 💖')">💖 Menina</button>
+  <button class="menino" onclick="selecionarSexo('Menino 💙')">💙 Menino</button>
+  <button class="menina" onclick="selecionarSexo('Menina 💖')">💖 Menina</button>
 
-  <div id="pagamento" style="display:none;">
-    <p><strong>Pix R$ 5,00</strong></p>
+  <button onclick="irParaNumeros()">Avançar</button>
+</div>
 
-    <div class="pix">
-      <input id="pixKey" value="e7688ae4-2bae-4f90-847d-8f6702c2f5f3" readonly>
-      <button onclick="copiarPix()">📋 Copiar chave Pix</button>
+<!-- ETAPA 2 -->
+<div id="etapa2" class="hidden">
+  <h4>Escolha um número</h4>
+  <div class="numeros" id="numeros"></div>
+  <button onclick="irParaPix()">Avançar para Pix</button>
+</div>
 
-      <p style="margin-top:10px;">Ou escaneie o QR Code:</p>
+<!-- ETAPA 3 -->
+<div id="etapa3" class="hidden">
+  <div class="pix">
+    <input id="pixKey" value="e7688ae4-2bae-4f90-847d-8f6702c2f5f3" readonly>
+    <button onclick="copiarPix()">📋 Copiar chave Pix</button>
+
+    <p>
       <a href="https://cofrinhos.picpay.com/ambSeb9hby5wYXVsby5uaWNvbGFzLzQvY2hkZWJlYmUvREVGQVVMVA" target="_blank">
-        <img src="./qr-pix.png.jpeg" width="200">
+        👉 Abrir QR Code Pix
       </a>
-    </div>
-
-    <button class="whatsapp" onclick="finalizar()">Enviar comprovante no WhatsApp</button>
+    </p>
   </div>
+
+  <button class="whatsapp" onclick="finalizar()">Enviar comprovante no WhatsApp</button>
+</div>
+
 </div>
 
 <script>
-let sexo = "";
+const API = "https://script.google.com/macros/s/AKfycbx_YK14Jw6cLYZLRmDzIz5a6qQXIT2Jx2JdElKHXJkv9lf8pFk9A9m8hgUqxbHWos6MzA/exec";
 
-function escolher(opcao) {
-  sexo = opcao;
-  document.getElementById("pagamento").style.display = "block";
+let sexoSelecionado = "";
+let numeroSelecionado = null;
+
+function selecionarSexo(sexo) {
+  sexoSelecionado = sexo;
+}
+
+function irParaNumeros() {
+  const nome = document.getElementById("nome").value;
+  if (!nome || !sexoSelecionado) {
+    alert("Preencha nome e sexo");
+    return;
+  }
+  document.getElementById("etapa1").classList.add("hidden");
+  document.getElementById("etapa2").classList.remove("hidden");
+  carregarNumeros();
+}
+
+async function carregarNumeros() {
+  const res = await fetch(API);
+  const data = await res.json();
+  const usados = data.usados || [];
+
+  const container = document.getElementById("numeros");
+  container.innerHTML = "";
+
+  for (let i = 1; i <= 200; i++) {
+    const div = document.createElement("div");
+    div.className = "numero";
+    div.innerText = i;
+
+    if (usados.includes(i)) {
+      div.classList.add("usado");
+    } else {
+      div.onclick = () => {
+        document.querySelectorAll(".numero")
+          .forEach(n => n.classList.remove("selecionado"));
+        div.classList.add("selecionado");
+        numeroSelecionado = i;
+      };
+    }
+    container.appendChild(div);
+  }
+}
+
+function irParaPix() {
+  if (!numeroSelecionado) {
+    alert("Escolha um número");
+    return;
+  }
+  document.getElementById("etapa2").classList.add("hidden");
+  document.getElementById("etapa3").classList.remove("hidden");
 }
 
 function copiarPix() {
@@ -94,25 +181,32 @@ function copiarPix() {
 
 async function finalizar() {
   const nome = document.getElementById("nome").value;
-  if (!nome) return alert("Informe seu nome");
 
-  const res = await fetch("URL_DO_APPS_SCRIPT", {
+  const res = await fetch(API, {
     method: "POST",
-    body: JSON.stringify({ nome, sexo })
+    body: JSON.stringify({
+      nome,
+      sexo: sexoSelecionado,
+      numero: numeroSelecionado
+    })
   });
 
   const data = await res.json();
-  if (data.erro) return alert(data.erro);
+  if (data.erro) {
+    alert(data.erro);
+    return;
+  }
 
-  const texto = `Olá! 👶✨
+  const msg = `Olá! 👶✨
 Nome: ${nome}
-Aposta: ${sexo}
-Número: ${data.numero}
+Número: ${numeroSelecionado}
+Aposta: ${sexoSelecionado}
 Valor: R$ 5,00
-Segue o comprovante 📎`;
+Segue comprovante 📎`;
 
   window.open(
-    `https://wa.me/5548984065039?text=${encodeURIComponent(texto)}`
+    "https://wa.me/5548984065039?text=" + encodeURIComponent(msg),
+    "_blank"
   );
 }
 </script>
