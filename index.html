@@ -114,33 +114,49 @@ button {
 </div>
 
 </div>
-
+https://script.google.com/macros/s/AKfycbz8BAtFNTMSxjJ0TlLm6J4P9cLnFzdJNbPggAL4mw5JKcIZr9OaFS9eaT2Efah2jYr4mw/exec
+  
 <script>
-const API = "https://script.google.com/macros/s/AKfycbx_YK14Jw6cLYZLRmDzIz5a6qQXIT2Jx2JdElKHXJkv9lf8pFk9A9m8hgUqxbHWos6MzA/exec";
+/* =====================================
+   URL DO SEU APPS SCRIPT
+   Substitua abaixo pela sua própria
+   URL final que termina com /exec
+====================================== */
+const API = "https://script.google.com/macros/s/AKfycbz8BAtFNTMSxjJ0TlLm6J4P9cLnFzdJNbPggAL4mw5JKcIZr9OaFS9eaT2Efah2jYr4mw/exec";
 
 let sexoSelecionado = "";
 let numeroSelecionado = null;
 
-function selecionarSexo(sexo) {
-  sexoSelecionado = sexo;
-}
-
+/* =====================================
+   ETAPA 1 → AVANÇAR PARA ESCOLHA DE NÚMEROS
+====================================== */
 function irParaNumeros() {
   const nome = document.getElementById("nome").value;
   if (!nome || !sexoSelecionado) {
     alert("Preencha nome e sexo");
     return;
   }
+
   document.getElementById("etapa1").classList.add("hidden");
   document.getElementById("etapa2").classList.remove("hidden");
+
   carregarNumeros();
 }
 
-async function carregarNumeros() {
-  const res = await fetch(API);
-  const data = await res.json();
-  const usados = data.usados || [];
+/* =====================================
+   CARREGA NÚMEROS USADOS VIA JSONP
+====================================== */
+function carregarNumeros() {
+  const script = document.createElement("script");
+  script.src = API + "?action=usados&callback=processarNumeros";
+  document.body.appendChild(script);
+}
 
+/* =====================================
+   PROCESSA OS NÚMEROS RETORNADOS
+====================================== */
+function processarNumeros(data) {
+  const usados = data.usados || [];
   const container = document.getElementById("numeros");
   container.innerHTML = "";
 
@@ -152,17 +168,27 @@ async function carregarNumeros() {
     if (usados.includes(i)) {
       div.classList.add("usado");
     } else {
-      div.onclick = () => {
-        document.querySelectorAll(".numero")
-          .forEach(n => n.classList.remove("selecionado"));
-        div.classList.add("selecionado");
-        numeroSelecionado = i;
-      };
+      div.onclick = () => selecionarNumero(div, i);
     }
+
     container.appendChild(div);
   }
 }
 
+/* =====================================
+   MARCA QUAL NÚMERO FOI SELECIONADO
+====================================== */
+function selecionarNumero(elemento, numero) {
+  document.querySelectorAll(".numero")
+    .forEach(n => n.classList.remove("selecionado"));
+
+  elemento.classList.add("selecionado");
+  numeroSelecionado = numero;
+}
+
+/* =====================================
+   AVANÇAR PARA PAGAMENTO PIX
+====================================== */
 function irParaPix() {
   if (!numeroSelecionado) {
     alert("Escolha um número");
@@ -172,6 +198,9 @@ function irParaPix() {
   document.getElementById("etapa3").classList.remove("hidden");
 }
 
+/* =====================================
+   FUNÇÃO PARA COPIAR PIX
+====================================== */
 function copiarPix() {
   const pix = document.getElementById("pixKey");
   pix.select();
@@ -179,37 +208,52 @@ function copiarPix() {
   alert("Chave Pix copiada!");
 }
 
-async function finalizar() {
+/* =====================================
+   FINALIZAR → SALVAR E WHATSAPP
+====================================== */
+function finalizar() {
   const nome = document.getElementById("nome").value;
 
-  const res = await fetch(API, {
-    method: "POST",
-    body: JSON.stringify({
-      nome,
-      sexo: sexoSelecionado,
-      numero: numeroSelecionado
-    })
-  });
-
-  const data = await res.json();
-  if (data.erro) {
-    alert(data.erro);
+  if (!nome || !sexoSelecionado || !numeroSelecionado) {
+    alert("Preencha nome, sexo e número!");
     return;
   }
 
-  const msg = `Olá! 👶✨
+  const payload = {
+    nome: nome,
+    sexo: sexoSelecionado,
+    numero: numeroSelecionado
+  };
+
+  /* Enviar via POST para o Apps Script */
+  fetch(API, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.erro) {
+      alert(data.erro);
+      return;
+    }
+
+    const mensagem = `Olá! 👶✨
 Nome: ${nome}
 Número: ${numeroSelecionado}
 Aposta: ${sexoSelecionado}
 Valor: R$ 5,00
 Segue comprovante 📎`;
 
-  window.open(
-    "https://wa.me/5548984065039?text=" + encodeURIComponent(msg),
-    "_blank"
-  );
+    window.open(
+      "https://wa.me/5548984065039?text=" + encodeURIComponent(mensagem),
+      "_blank"
+    );
+  })
+  .catch(err => {
+    alert("Erro ao salvar. Tente novamente.");
+    console.error(err);
+  });
 }
 </script>
-
 </body>
 </html>
