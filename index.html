@@ -151,7 +151,7 @@ function irParaNumeros() {
 ================================ */
 function carregarNumeros() {
   const script = document.createElement("script");
-  script.src = API + "?action=usados&callback=processarNumeros";
+  script.src = API + "?action=usados&callback=processarNumeros&t=" + Date.now();
   document.body.appendChild(script);
 }
 
@@ -257,6 +257,7 @@ Segue comprovante 📎`;
   );
 }
 </script>
+window.processarNumeros = processarNumeros;
 
 <!-- iframe invisível para envio -->
 <iframe name="hidden_iframe" style="display:none;"></iframe>
