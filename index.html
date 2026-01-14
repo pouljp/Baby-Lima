@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Bolão do Bebê 👶</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f6f6f6;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+.card {
+  background: #fff;
+  padding: 25px;
+  width: 100%;
+  max-width: 420px;
+  border-radius: 14px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+}
+button {
+  width: 100%;
+  padding: 12px;
+  margin: 6px 0;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+}
+.menino { background: #cce5ff; }
+.menina { background: #ffd6e7; }
+.whatsapp { background: #25D366; color: #fff; }
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+.pix {
+  background: #f1f1f1;
+  padding: 10px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h2>Bolão do Bebê 👶💖</h2>
+  <p>Aposta: <strong>R$ 5,00</strong></p>
+
+  <input id="nome" placeholder="Seu nome">
+
+  <button class="menino" onclick="escolher('Menino 💙')">💙 Menino</button>
+  <button class="menina" onclick="escolher('Menina 💖')">💖 Menina</button>
+
+  <div id="pagamento" style="display:none;">
+    <p><strong>Pix R$ 5,00</strong></p>
+
+    <div class="pix">
+      <input id="pixKey" value="e7688ae4-2bae-4f90-847d-8f6702c2f5f3" readonly>
+      <button onclick="copiarPix()">📋 Copiar chave Pix</button>
+
+      <p style="margin-top:10px;">Ou escaneie o QR Code:</p>
+      <a href="https://cofrinhos.picpay.com/ambSeb9hby5wYXVsby5uaWNvbGFzLzQvY2hkZWJlYmUvREVGQVVMVA" target="_blank">
+        <img src="qr-pix.png" width="200">
+      </a>
+    </div>
+
+    <button class="whatsapp" onclick="finalizar()">Enviar comprovante no WhatsApp</button>
+  </div>
+</div>
+
+<script>
+let sexo = "";
+
+function escolher(opcao) {
+  sexo = opcao;
+  document.getElementById("pagamento").style.display = "block";
+}
+
+function copiarPix() {
+  const pix = document.getElementById("pixKey");
+  pix.select();
+  document.execCommand("copy");
+  alert("Chave Pix copiada!");
+}
+
+async function finalizar() {
+  const nome = document.getElementById("nome").value;
+  if (!nome) return alert("Informe seu nome");
+
+  const res = await fetch("URL_DO_APPS_SCRIPT", {
+    method: "POST",
+    body: JSON.stringify({ nome, sexo })
+  });
+
+  const data = await res.json();
+  if (data.erro) return alert(data.erro);
+
+  const texto = `Olá! 👶✨
+Nome: ${nome}
+Aposta: ${sexo}
+Número: ${data.numero}
+Valor: R$ 5,00
+Segue o comprovante 📎`;
+
+  window.open(
+    `https://wa.me/5548984065039?text=${encodeURIComponent(texto)}`
+  );
+}
+</script>
+
+</body>
+</html>
