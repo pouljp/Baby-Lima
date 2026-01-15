@@ -21,9 +21,9 @@ body {
   border-radius: 14px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
-h2, h4 { text-align: center; }
+h2,h4 { text-align: center; }
 
-input, button {
+input,button {
   width: 100%;
   padding: 10px;
   margin-top: 8px;
@@ -32,45 +32,48 @@ input, button {
   font-size: 16px;
 }
 
-button {
-  border: none;
-  cursor: pointer;
-}
+button { cursor:pointer; border:none; }
 
-.menino { background: #cce5ff; }
-.menina { background: #ffd6e7; }
-.whatsapp { background: #25D366; color: white; }
+.menino { background:#cce5ff; }
+.menina { background:#ffd6e7; }
+.whatsapp { background:#25D366;color:white; }
+
+button.ativo {
+  box-shadow: 0 0 0 3px #333 inset;
+  font-weight: bold;
+}
 
 .numeros {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
-  margin-top: 10px;
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:6px;
+  margin-top:10px;
 }
 .numero {
-  background: #eee;
-  padding: 8px;
-  text-align: center;
-  border-radius: 6px;
-  cursor: pointer;
+  background:#eee;
+  padding:8px;
+  text-align:center;
+  border-radius:6px;
+  cursor:pointer;
 }
 .numero.usado {
-  background: #ccc;
-  text-decoration: line-through;
-  cursor: not-allowed;
+  background:#ccc;
+  text-decoration:line-through;
+  cursor:not-allowed;
 }
 .numero.selecionado {
-  background: #8bc34a;
-  color: white;
+  background:#8bc34a;
+  color:white;
 }
 
 .pix {
-  background: #f1f1f1;
-  padding: 10px;
-  border-radius: 8px;
-  text-align: center;
+  background:#f1f1f1;
+  padding:10px;
+  border-radius:8px;
+  text-align:center;
 }
-.hidden { display: none; }
+
+.hidden { display:none; }
 </style>
 </head>
 
@@ -78,148 +81,121 @@ button {
 <div class="card">
 
 <h2>Bolão do Bebê 👶</h2>
-<p style="text-align:center"><strong>Valor: R$ 5,00</strong></p>
+<p style="text-align:center"><strong>R$ 5,00 por número</strong></p>
 
 <!-- ETAPA 1 -->
 <div id="etapa1">
   <input id="nome" placeholder="Seu nome">
 
-  <button class="menino" onclick="selecionarSexo('Menino 💙')">💙 Menino</button>
-  <button class="menina" onclick="selecionarSexo('Menina 💖')">💖 Menina</button>
+  <button class="menino" onclick="selecionarSexo('Menino 💙',this)">💙 Menino</button>
+  <button class="menina" onclick="selecionarSexo('Menina 💖',this)">💖 Menina</button>
 
   <button onclick="irParaNumeros()">Avançar</button>
 </div>
 
 <!-- ETAPA 2 -->
 <div id="etapa2" class="hidden">
-  <h4>Escolha um número</h4>
+  <h4>Escolha seus números</h4>
+  <p id="loading" style="text-align:center">⏳ Carregando números...</p>
   <div class="numeros" id="numeros"></div>
-  <button onclick="irParaPix()">Avançar para Pix</button>
+  <p id="total" style="text-align:center;font-weight:bold"></p>
+  <button onclick="enviarPalpite()">Enviar palpite</button>
 </div>
+
 
 <!-- ETAPA 3 -->
 <div id="etapa3" class="hidden">
   <div class="pix">
-    <input id="pixKey" value="e7688ae4-2bae-4f90-847d-8f6702c2f5f3" readonly>
-    <button onclick="copiarPix()">📋 Copiar chave Pix</button>
-
-    <p>
-      <a href="https://cofrinhos.picpay.com/ambSeb9hby5wYXVsby5uaWNvbGFzLzQvY2hkZWJlYmUvREVGQVVMVA" target="_blank">
-        👉 Abrir QR Code Pix
-      </a>
+    <p style="font-size:16px;font-weight:bold">
+      Favor realizar o Pix no valor total
     </p>
+
+    <p id="resumoPix" style="margin:10px 0;font-size:15px"></p>
+
+    <p style="font-weight:bold;font-size:18px">
+      Total: <span id="valorPix"></span>
+    </p>
+
+    <input
+      id="pixKey"
+      name="pixKey"
+      value="e7688ae4-2bae-4f90-847d-8f6702c2f5f3"
+      readonly
+    >
+
+    <button onclick="copiarPix()">📋 Copiar chave Pix</button>
   </div>
 
-  <button class="whatsapp" onclick="finalizar()">Enviar comprovante no WhatsApp</button>
+  <button class="whatsapp" onclick="abrirWhatsApp()">
+    Enviar comprovante no WhatsApp
+  </button>
 </div>
 
-</div>
 <script>
-/* ===============================
-   CONFIGURAÇÃO
-================================ */
-const API = "https://script.google.com/macros/s/AKfycbzR5NijYoBldIkBox0pMM9d1EQEEk7DToiAn5EYt0ARUQHf2_848oVTJYrxhWe0qclGBw/exec";
+const API = "https://script.google.com/macros/s/AKfycbzOqR9mIgX-riFXsQmJgSwUKavB-pIcyALm5nwC7VT2o11i1SbmCYKzzj3SuiTQ0S0nrw/exec";
 
 let sexoSelecionado = "";
-let numeroSelecionado = null;
+let numerosSelecionados = [];
+const VALOR = 5;
 
-/* ===============================
-   SEXO
-================================ */
-function selecionarSexo(sexo) {
+function selecionarSexo(sexo, btn){
   sexoSelecionado = sexo;
+  document.querySelectorAll(".menino,.menina").forEach(b=>b.classList.remove("ativo"));
+  btn.classList.add("ativo");
 }
 
-/* ===============================
-   IR PARA ETAPA NÚMEROS
-================================ */
-function irParaNumeros() {
-  const nome = document.getElementById("nome").value.trim();
-  if (!nome || !sexoSelecionado) {
-    alert("Preencha nome e sexo");
+function irParaNumeros(){
+  if(!document.getElementById("nome").value || !sexoSelecionado){
+    alert("Preencha tudo");
     return;
   }
-
-  document.getElementById("etapa1").style.display = "none";
-  document.getElementById("etapa2").style.display = "block";
-
+  etapa1.style.display="none";
+  etapa2.style.display="block";
   carregarNumeros();
 }
 
-/* ===============================
-   JSONP → CARREGAR NÚMEROS
-================================ */
-function carregarNumeros() {
-  const script = document.createElement("script");
-  script.src = API + "?action=usados&callback=processarNumeros&t=" + Date.now();
-  document.body.appendChild(script);
+function carregarNumeros(){
+  const s=document.createElement("script");
+  s.src=API+"?action=usados&callback=processarNumeros&t="+Date.now();
+  document.body.appendChild(s);
 }
 
-function processarNumeros(data) {
-  const usados = data.usados || [];
-  const container = document.getElementById("numeros");
-  container.innerHTML = "";
-
-  for (let i = 1; i <= 200; i++) {
-    const div = document.createElement("div");
-    div.className = "numero";
-    div.innerText = i;
-
-    if (usados.includes(i)) {
-      div.classList.add("usado");
-    } else {
-      div.onclick = () => selecionarNumero(div, i);
+function processarNumeros(data){
+  loading.style.display="none";
+  numeros.innerHTML="";
+  for(let i=1;i<=200;i++){
+    const d=document.createElement("div");
+    d.className="numero";
+    d.innerText=i;
+    if(data.usados.includes(i)){
+      d.classList.add("usado");
+    }else{
+      d.onclick=()=>selecionarNumero(d,i);
     }
-
-    container.appendChild(div);
+    numeros.appendChild(d);
   }
 }
 
-/* ===============================
-   SELECIONAR NÚMERO
-================================ */
-function selecionarNumero(el, num) {
-  document.querySelectorAll(".numero").forEach(n => n.classList.remove("selecionado"));
-  el.classList.add("selecionado");
-  numeroSelecionado = num;
-}
-
-/* ===============================
-   IR PARA PIX
-================================ */
-function irParaPix() {
-  if (!numeroSelecionado) {
-    alert("Escolha um número");
-    return;
+function selecionarNumero(el,num){
+  if(numerosSelecionados.includes(num)){
+    numerosSelecionados=numerosSelecionados.filter(n=>n!==num);
+    el.classList.remove("selecionado");
+  }else{
+    numerosSelecionados.push(num);
+    el.classList.add("selecionado");
   }
-
-  document.getElementById("etapa2").style.display = "none";
-  document.getElementById("etapa3").style.display = "block";
+  total.innerText=`Total: R$ ${numerosSelecionados.length*VALOR},00`;
 }
 
-/* ===============================
-   COPIAR PIX
-================================ */
-function copiarPix() {
-  const pix = document.getElementById("pixKey");
-  pix.select();
-  document.execCommand("copy");
-  alert("Chave Pix copiada!");
-}
-
-/* ===============================
-   FINALIZAR → SALVAR NA PLANILHA
-   (SEM FETCH, SEM CORS)
-================================ */
-function finalizar() {
+function enviarPalpite() {
   const nome = document.getElementById("nome").value.trim();
 
-  if (!nome || !sexoSelecionado || !numeroSelecionado) {
-    alert("Dados incompletos");
+  if (!nome || !sexoSelecionado || numerosSelecionados.length === 0) {
+    alert("Preencha tudo");
     return;
   }
 
-  // cria formulário invisível
+  // 👉 cria UM formulário
   const form = document.createElement("form");
   form.method = "POST";
   form.action = API;
@@ -228,7 +204,7 @@ function finalizar() {
   const campos = {
     nome: nome,
     sexo: sexoSelecionado,
-    numero: numeroSelecionado
+    numeros: numerosSelecionados.join(",") // 🔥 ENVIA TODOS
   };
 
   for (const key in campos) {
@@ -243,24 +219,57 @@ function finalizar() {
   form.submit();
   document.body.removeChild(form);
 
-  // abre WhatsApp
-  const mensagem = `Olá! 👶✨
+  // 👉 PREENCHE TELA DO PIX
+  const quantidade = numerosSelecionados.length;
+  const valorTotal = quantidade * VALOR;
+
+  document.getElementById("resumoPix").innerText =
+    `${quantidade} número(s) selecionado(s)`;
+
+  document.getElementById("valorPix").innerText =
+    `R$ ${valorTotal},00`;
+
+  etapa2.style.display = "none";
+  etapa3.style.display = "block";
+}
+
+function copiarPix() {
+  const pix = document.getElementById("pixKey").value;
+  navigator.clipboard.writeText(pix)
+    .then(() => {
+      alert("Chave Pix copiada com sucesso!");
+    })
+    .catch(() => {
+      alert("Erro ao copiar a chave Pix");
+    });
+}
+
+function abrirWhatsApp() {
+  const nome = document.getElementById("nome").value.trim();
+  const quantidade = numerosSelecionados.length;
+  const valorTotal = quantidade * VALOR;
+  const listaNumeros = numerosSelecionados.join(", ");
+
+  const mensagem =
+`Oi 😊
+Já fiz meu palpite no bolão do bebê 👶
+
 Nome: ${nome}
-Número: ${numeroSelecionado}
-Aposta: ${sexoSelecionado}
-Valor: R$ 5,00
-Segue comprovante 📎`;
+Palpite: ${sexoSelecionado}
+Números: ${listaNumeros}
+Total pago: R$ ${valorTotal},00
+
+Vou enviar o comprovante do Pix.`;
 
   window.open(
     "https://wa.me/5548984065039?text=" + encodeURIComponent(mensagem),
     "_blank"
   );
 }
-</script>
+
 window.processarNumeros = processarNumeros;
+</script>
 
-<!-- iframe invisível para envio -->
-<iframe name="hidden_iframe" style="display:none;"></iframe>
-
+<iframe name="hidden_iframe" style="display:none"></iframe>
 </body>
 </html>
